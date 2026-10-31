@@ -1,45 +1,99 @@
-name: CI
+name: ci
 
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # Obsolete pull-request heads are cancelled; a running main validation always completes.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
-    name: backend (python)
-    uses: NDDev-Technocracy-Archive/ci-workflows-20261014/.github/workflows/python-ci.yml@93eeb2a65e98a29e9dbff7909f67c6419abff046
-    with:
-      uv_version: "0.12.23"
-      runner: ubuntu-latest
-      python_version: '3.12'
-      install_command: 'uv sync --group dev'
-      test_command: 'uv run ruff check . && uv run mypy && uv run pytest'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: '0.13.5'
+          python-version: '3.12'
+          enable-cache: 'false'
+      - uses: NDDev-Technocracy-Standarts/std-0004-ci-cd-workflows/.github/actions/hosted-cache@ab62f45b2a3067e5a7425d703f7fd07f1618b72c # nddev-cicd-v0.6.14
+        with:
+          ecosystems: uv
+      - name: Ruff, mypy and pytest in the locked environment
+        run: |
+          uv sync --locked --group dev
+          uv run --no-sync ruff check .
+          uv run --no-sync mypy
+          uv run --no-sync pytest
 
   frontend:
-    name: frontend (node)
-    uses: NDDev-Technocracy-Archive/ci-workflows-20261014/.github/workflows/node-ci.yml@93eeb2a65e98a29e9dbff7909f67c6419abff046
-    with:
-      package_manager: npm
-      node_version: "24.21.0"
-      npm_version: "11.19.0"
-      runner: ubuntu-latest
-      working_directory: apps/web
-      install_command: 'npm ci --no-audit'
-      test_command: 'npm run typecheck && npm run build'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.21.0'
+          package-manager-cache: false
+      - uses: NDDev-Technocracy-Standarts/std-0004-ci-cd-workflows/.github/actions/hosted-cache@ab62f45b2a3067e5a7425d703f7fd07f1618b72c # nddev-cicd-v0.6.14
+        with:
+          ecosystems: npm
+          working-directory: apps/web
+      - name: Typecheck and build
+        run: |
+          npm ci --no-audit
+          npm run typecheck
+          npm run build
 
-  zizmor:
-    uses: NDDev-Technocracy-Archive/ci-workflows-20261014/.github/workflows/zizmor-no-sarif.yml@93eeb2a65e98a29e9dbff7909f67c6419abff046
+  workflows:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: NDDev-Technocracy-Standarts/std-0004-ci-cd-workflows/.github/actions/tools@ab62f45b2a3067e5a7425d703f7fd07f1618b72c # nddev-cicd-v0.6.14
+        with:
+          capability: security
+      - name: Lint and audit workflows
+        run: |
+          actionlint
+          zizmor --offline --no-progress .github
+      - name: Scan new pull request commits, or the full history on main
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -n "$BASE" ]; then
+            gitleaks git --no-banner --redact --log-opts="$BASE..$HEAD" .
+          else
+            gitleaks git --no-banner --redact .
+          fi
 
-  secret-scan:
-    uses: NDDev-Technocracy-Archive/ci-workflows-20261014/.github/workflows/secret-scan.yml@93eeb2a65e98a29e9dbff7909f67c6419abff046
-
-  actionlint:
-    uses: NDDev-Technocracy-Archive/ci-workflows-20261014/.github/workflows/actionlint.yml@93eeb2a65e98a29e9dbff7909f67c6419abff046
-    with:
-      runner: ubuntu-latest
+  gate:
+    needs: [backend, frontend, workflows]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: NDDev-Technocracy-Standarts/std-0004-ci-cd-workflows/.github/actions/gate@ab62f45b2a3067e5a7425d703f7fd07f1618b72c # nddev-cicd-v0.6.14
+        with:
+          needs: ${{ toJSON(needs) }}
+          expected: '{"backend":"success","frontend":"success","workflows":"success"}'
