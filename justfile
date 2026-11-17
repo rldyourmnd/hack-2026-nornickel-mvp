@@ -26,14 +26,7 @@ check-frontend:
 
 # Checks commands, workflows, shell helpers and the complete Git history.
 check-workflows:
-    just --fmt --check
-    git diff --check HEAD
-    python3 -m json.tool .github/hosted-tools.json >/dev/null
-    actionlint
-    zizmor --offline --no-progress .github
-    bash -n scripts/ci-security.sh scripts/ci-verify.sh
-    shellcheck scripts/ci-security.sh scripts/ci-verify.sh
-    betterleaks git --no-banner --redact --log-opts=--all .
+    bash scripts/ci-security.sh source
 
 # Runs the full original pytest suite on the executor.
 test:
