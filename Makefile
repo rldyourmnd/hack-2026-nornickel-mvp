@@ -1,19 +1,16 @@
 .PHONY: install test lint typecheck api web demo eval generate-fixtures docker-up docker-down ci reindex warmup
 
 install:
-	uv sync --group dev
-	cd apps/web && npm install
+	just setup
 
 lint:
-	uv run ruff check .
-	cd apps/web && npm run lint
+	just check
 
 typecheck:
-	uv run mypy
-	cd apps/web && npm run typecheck
+	just check
 
 test:
-	uv run pytest
+	just test
 
 api:
 	uv run fastapi dev services/api/main.py --host 0.0.0.0 --port 8000
@@ -25,7 +22,7 @@ generate-fixtures:
 	uv run --extra fixtures python scripts/generate_synthetic_docs.py
 
 eval:
-	uv run python scripts/run_eval.py
+	just eval
 
 reindex:
 	uv run python scripts/reindex.py
@@ -41,5 +38,5 @@ docker-down:
 
 demo: docker-up
 
-ci: lint typecheck test
-	cd apps/web && npm run build
+ci:
+	just verify
