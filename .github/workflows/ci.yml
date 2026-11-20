@@ -33,7 +33,7 @@ jobs:
       hosted-runner: ubuntu-26.04
       recipe: verify-frontend
       prepare: setup-frontend
-      node-version: '24.21.0'
+      node-version: '26.13.1'
       timeout-minutes: 15
 
   workflows:
@@ -65,5 +65,10 @@ jobs:
       - name: Every required job ended as expected
         env:
           NEEDS: ${{ toJSON(needs) }}
-          EXPECTED: '{"backend":"success","frontend":"success","workflows":"success","merge-stops":"success"}'
-        run: jq -e --argjson want "$EXPECTED" 'map_values(.result) == $want' <<< "$NEEDS"
+          MERGE_STOPS: ${{ github.event_name == 'pull_request' && 'success' || 'skipped' }}
+        run: |
+          jq -e --arg stop "$MERGE_STOPS" '
+            map_values(.result) == {
+              backend: "success", frontend: "success", workflows: "success", "merge-stops": $stop
+            }
+          ' <<< "$NEEDS"
