@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   backend:
-    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/recipe.yml@98ff340ab5d2e0f62821a6ee25fd4161b87f59ba # v0.6.69
+    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/recipe.yml@03d53ec146797bc27d7b8b37abbf766ab82041b6 # v0.6.81
     permissions:
       contents: read
     with:
@@ -26,7 +26,7 @@ jobs:
       timeout-minutes: 20
 
   frontend:
-    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/recipe.yml@98ff340ab5d2e0f62821a6ee25fd4161b87f59ba # v0.6.69
+    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/recipe.yml@03d53ec146797bc27d7b8b37abbf766ab82041b6 # v0.6.81
     permissions:
       contents: read
     with:
@@ -37,7 +37,7 @@ jobs:
       timeout-minutes: 15
 
   workflows:
-    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/recipe.yml@98ff340ab5d2e0f62821a6ee25fd4161b87f59ba # v0.6.69
+    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/recipe.yml@03d53ec146797bc27d7b8b37abbf766ab82041b6 # v0.6.81
     permissions:
       contents: read
     with:
@@ -49,7 +49,7 @@ jobs:
       timeout-minutes: 10
 
   merge-stops:
-    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/merge-stops.yml@98ff340ab5d2e0f62821a6ee25fd4161b87f59ba # v0.6.69
+    uses: NDDev-Technocracy-OpenNetwork/nddev-ci/.github/workflows/merge-stops.yml@03d53ec146797bc27d7b8b37abbf766ab82041b6 # v0.6.81
     permissions:
       contents: read
     with:
