@@ -9,7 +9,7 @@ dependencies = [
   "duckdb>=1.4.3",
   "fastapi[standard]>=0.128.0",
   "json-repair>=0.30.0",
-  "langfuse>=2.59.7,<2.60",
+  "langfuse>=4.7,<5",
   "litellm>=1.83.3",
   "networkx>=3.6.1",
   "pydantic>=2.12.5",
@@ -109,5 +109,5 @@ ignore_missing_imports = true
 follow_imports = "skip"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
