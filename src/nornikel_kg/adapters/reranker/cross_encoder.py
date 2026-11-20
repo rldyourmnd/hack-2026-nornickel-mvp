@@ -2,31 +2,41 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable, Iterable
 from functools import lru_cache
-from typing import Any
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
-# BAAI/bge-reranker-v2-m3: Apache-2.0, multilingual (XLM-R backbone, RU
-# covered via MIRACL training). ONNX backend when optimum is present, torch
-# fallback otherwise. Evidence: plans/09 (SOTA research, 2026-07-03).
+# BAAI/bge-reranker-v2-m3 is a multilingual XLM-R cross-encoder.
 _DEFAULT_MODEL_ID = "BAAI/bge-reranker-v2-m3"
+
+type _Predictor = Callable[[list[tuple[str, str]]], Iterable[float]]
+
+
+def _sentence_transformers_predictor(model_id: str, backend: str) -> _Predictor:
+    from sentence_transformers import CrossEncoder
+
+    return cast(_Predictor, CrossEncoder(model_id, backend=backend, device="cpu").predict)
 
 
 @lru_cache(maxsize=1)
-def _load_model() -> Any:
-    from sentence_transformers import CrossEncoder
-
+def _load_predictor() -> _Predictor:
     model_id = os.getenv("RERANKER_MODEL_ID", _DEFAULT_MODEL_ID)
     backend = os.getenv("RERANKER_BACKEND", "onnx")
     logger.info("Loading reranker %s (backend=%s)", model_id, backend)
     try:
-        return CrossEncoder(model_id, backend=backend, device="cpu")
+        if backend == "onnx":
+            from fastembed.rerank.cross_encoder import TextCrossEncoder
+
+            model = TextCrossEncoder(model_name=model_id, providers=["CPUExecutionProvider"])
+            return cast(_Predictor, model.rerank_pairs)
+        return _sentence_transformers_predictor(model_id, backend)
     except Exception:
         if backend == "torch":
             raise
         logger.warning("Reranker backend %s unavailable; falling back to torch", backend)
-        return CrossEncoder(model_id, backend="torch", device="cpu")
+        return _sentence_transformers_predictor(model_id, "torch")
 
 
 class CrossEncoderReranker:
@@ -51,9 +61,8 @@ class CrossEncoderReranker:
         if len(candidates) <= top_k:
             ordered = candidates
         else:
-            model = _load_model()
             pairs = [(query, text[: self.max_chars]) for _, text in candidates]
-            scores = model.predict(pairs)
+            scores = _load_predictor()(pairs)
             ranked = sorted(
                 zip(candidates, scores, strict=True), key=lambda item: -float(item[1])
             )
