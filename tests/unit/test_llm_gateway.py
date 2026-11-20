@@ -188,3 +188,11 @@ def test_gateway_retries_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert calls["n"] == 3
     assert result.content == {"sentences": []}
+
+
+def test_locked_langfuse_supports_litellm_callback() -> None:
+    from importlib.metadata import version
+
+    from litellm.integrations.langfuse.langfuse import raise_if_unsupported_langfuse_version
+
+    raise_if_unsupported_langfuse_version(version("langfuse"))
