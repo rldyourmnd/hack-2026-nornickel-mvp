@@ -22,7 +22,7 @@ jobs:
       recipe: verify-backend
       prepare: setup-backend
       python-version: '3.12.16'
-      uv-version: '0.13.5'
+      uv-version: '0.13.9'
       timeout-minutes: 20
 
   frontend:
