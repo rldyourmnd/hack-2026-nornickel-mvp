@@ -21,7 +21,7 @@ jobs:
       hosted-runner: ubuntu-26.04
       recipe: verify-backend
       prepare: setup-backend
-      python-version: '3.12.16'
+      python-version: '3.15.2'
       uv-version: '0.13.9'
       timeout-minutes: 20
 
